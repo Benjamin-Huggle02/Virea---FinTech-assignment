@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Virea - Pay the RSVP</title></head>
+<body>
+  <div class="topbar"><div class="brand">Virea</div>
+    <div class="role-switch" id="roleSwitch">
+      <button data-view="create" class="on">Host</button>
+      <button data-view="dash">Dashboard</button>
+      <button data-view="guest">Guest phone</button>
+    </div></div>
+  <div class="wrap" id="app"></div>
+<script>
+// Virea skeleton: shared state + view router. Views filled in later phases.
+const App = { view:'create', event:null, attendances:[], guestStep:'view',
+  guestDraft:{name:'',answers:{},chosen:null}, pollTimer:null };
+function render(){ document.getElementById('app').textContent = 'view: '+App.view; }
+document.querySelectorAll('#roleSwitch button').forEach(b=>b.onclick=()=>{App.view=b.dataset.view;render();});
+render();
+</script>
+</body></html>
