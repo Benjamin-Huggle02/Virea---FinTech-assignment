@@ -2621,8 +2621,118 @@ function buildSharePanel(panel){
   card.querySelector('#goGuest').onclick=()=>{App.view='guest';render();};
 }
 
-/* ---------- GUEST: mobile flow (Phase 3) ---------- */
-function GuestView(){ return el(`<div class="card pad" style="text-align:center;color:var(--muted)">Guest flow — coming in Phase 3.</div>`); }
+/* ---------- GUEST: mobile flow ---------- */
+function GuestView(){
+  if(!App.event) return el(`<div class="card pad" style="text-align:center;color:var(--muted)">Create an event first (Host tab).</div>`);
+  const ev=App.event;
+  const taken=App.attendances.length;
+  if(taken>=ev.capacity && App.guestStep!=='confirmed') App.guestStep='full';
+  const stage=el(`<div>
+    <div class="eyebrow" style="text-align:center">Guest · mobile web · no app</div>
+    <div class="phone-stage"><div class="phone"><div class="screen" id="screen"></div></div></div>
+    <p class="demo-note">This is the page a guest opens from the link. Mock payment — no real charge.</p>
+  </div>`);
+  const screen=stage.querySelector('#screen');
+  if(App.guestStep==='full'){ screen.appendChild(GuestFull(ev)); return stage; }
+  if(App.guestStep==='confirmed'){ screen.appendChild(GuestConfirmed(ev)); return stage; }
+  if(App.guestStep==='paying'){ screen.appendChild(GuestPaying(ev)); return stage; }
+  screen.appendChild(GuestForm(ev,taken));
+  return stage;
+}
+
+function GuestForm(ev,taken){
+  const node=el(`<div></div>`);
+  node.appendChild(el(`<div class="g-hero">
+      <span class="pill ${ev.visibility==='public'?'pub':'priv'}" style="background:rgba(255,255,255,.18);color:#fff">${ev.visibility==='public'?'Public event':'Private invite'}</span>
+      <div class="ev-title">${esc(ev.title)}</div>
+      <div class="ev-meta">${esc(ev.date)} · ${esc(ev.location)}</div>
+      <div class="ev-meta" style="margin-top:6px;opacity:.85">${esc(ev.desc||'')}</div>
+      <div class="g-amt"><b>${euros(ev.amountCents)}</b><span>to confirm your spot · ${ev.capacity-taken} of ${ev.capacity} left</span></div>
+    </div>`));
+  const body=el(`<div class="g-body"></div>`);
+  body.appendChild(el(`<div class="guest-id"><div><label class="fld">Your name</label>
+      <input class="input" id="g-name" placeholder="Alex" value="${esc(App.guestDraft.name)}"></div></div>`));
+  ev.questions.forEach(q=>{
+    const qc=el(`<div class="qcard" data-qid="${q.id}"></div>`);
+    qc.appendChild(el(`<div class="qp">${esc(q.prompt)}</div>`));
+    if(q.type==='choice'){
+      const ch=el(`<div class="choices"></div>`);
+      q.options.forEach(o=>{
+        const b=el(`<button class="choice ${App.guestDraft.answers[q.id]===o?'on':''}"><span class="tick"></span>${esc(o)}</button>`);
+        b.onclick=()=>{App.guestDraft.answers[q.id]=o;ch.querySelectorAll('.choice').forEach(x=>x.classList.toggle('on',x===b));};
+        ch.appendChild(b);
+      });
+      qc.appendChild(ch);
+    }else{
+      const t=el(`<input class="input" placeholder="Type your answer" value="${esc(App.guestDraft.answers[q.id]||'')}">`);
+      t.oninput=()=>App.guestDraft.answers[q.id]=t.value; qc.appendChild(t);
+    }
+    body.appendChild(qc);
+  });
+  const pay=el(`<button class="btn" style="margin-top:6px">Pay ${euros(ev.amountCents)} · confirm my spot</button>`);
+  pay.onclick=()=>{
+    const name=node.querySelector('#g-name').value.trim();
+    if(!name){toast('Add your name first');node.querySelector('#g-name').focus();return;}
+    App.guestDraft.name=name;
+    for(const q of ev.questions){ if(q.type==='choice' && !App.guestDraft.answers[q.id]){toast('Please answer: '+q.prompt);return;} }
+    App.guestStep='paying'; render(); setTimeout(commitAttendance, 1600);
+  };
+  body.appendChild(pay);
+  body.appendChild(el(`<div class="lock">🔒 Secure checkout · <b>demo payment</b>, no real charge</div>`));
+  node.appendChild(body);
+  return node;
+}
+
+function GuestPaying(ev){
+  return el(`<div class="conf-screen">
+    <div style="font-size:40px;margin-bottom:14px">💳</div>
+    <div class="conf-title">Processing ${euros(ev.amountCents)}…</div>
+    <div class="conf-sub">Confirming your spot at ${esc(ev.title)}</div>
+    <button class="btn" disabled style="opacity:.85"><span class="spinner"></span>Securing your spot</button>
+  </div>`);
+}
+
+function GuestConfirmed(ev){
+  const a=App.attendances[App.attendances.length-1]||{guestName:App.guestDraft.name};
+  const node=el(`<div class="conf-screen">
+    <div class="check"><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#16A34A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="conf-title">You're in 🎉</div>
+    <div class="conf-sub">Spot confirmed for <b>${esc(ev.title)}</b></div>
+    <div class="receipt">
+      <div class="ln"><span>Guest</span><b>${esc(a.guestName)}</b></div>
+      <div class="ln"><span>Paid</span><b>${euros(ev.amountCents)}</b></div>
+      <div class="ln"><span>When</span><b>${esc(ev.date)}</b></div>
+      <div class="ln"><span>Where</span><b>${esc(ev.location)}</b></div>
+    </div>
+    <button class="btn ghost sm" style="margin-top:18px;width:100%" id="seeDash">See host dashboard →</button>
+    <button class="btn sm" style="margin-top:8px;width:100%" id="another">Add another guest (demo)</button>
+  </div>`);
+  node.querySelector('#seeDash').onclick=()=>{App.view='dash';render();};
+  node.querySelector('#another').onclick=()=>{App.guestStep='view';App.guestDraft={name:'',answers:{},chosen:null};render();};
+  return node;
+}
+
+function GuestFull(ev){
+  const node=el(`<div class="full-screen">
+    <div style="font-size:42px;margin-bottom:12px">🙌</div>
+    <div class="conf-title">This event is full</div>
+    <div class="conf-sub">All ${ev.capacity} spots at ${esc(ev.title)} are taken. Public links stop at capacity — no awkward over-asking.</div>
+    <button class="btn ghost sm" style="width:100%" id="seeDash2">See who's going →</button>
+  </div>`);
+  node.querySelector('#seeDash2').onclick=()=>{App.view='dash';render();};
+  return node;
+}
+
+/* the only way a guest enters the system: the (mock) payment succeeded */
+function commitAttendance(){
+  const ev=App.event;
+  const a={ id:slug(), guestName:App.guestDraft.name, answers:{...App.guestDraft.answers},
+    amountCents:ev.amountCents, at:Date.now(), fresh:true };
+  App.attendances.push(a);
+  if(App.attendances.length>=ev.capacity) ev.status='full';
+  App.guestStep='confirmed'; render();
+  toast(App.guestDraft.name+' just paid '+euros(ev.amountCents));
+}
 
 /* ---------- DASHBOARD: live host view (Phase 4) ---------- */
 function DashView(){ return el(`<div class="card pad" style="text-align:center;color:var(--muted)">Dashboard — coming in Phase 4.</div>`); }
