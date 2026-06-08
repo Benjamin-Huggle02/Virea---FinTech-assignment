@@ -2734,8 +2734,60 @@ function commitAttendance(){
   toast(App.guestDraft.name+' just paid '+euros(ev.amountCents));
 }
 
-/* ---------- DASHBOARD: live host view (Phase 4) ---------- */
-function DashView(){ return el(`<div class="card pad" style="text-align:center;color:var(--muted)">Dashboard — coming in Phase 4.</div>`); }
+/* ---------- DASHBOARD: live host view ---------- */
+function DashView(){
+  if(!App.event) return el(`<div class="card pad" style="text-align:center;color:var(--muted)">Create an event first (Host tab).</div>`);
+  const ev=App.event;
+  const taken=App.attendances.length;
+  const collected=App.attendances.reduce((s,a)=>s+a.amountCents,0);
+  const pct=Math.min(100,Math.round(taken/ev.capacity*100));
+  const node=el(`<div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px">
+      <div>
+        <div class="eyebrow">Host dashboard</div>
+        <h1 class="page">${esc(ev.title)}</h1>
+        <p class="sub">${esc(ev.date)} · ${esc(ev.location)} · <span class="pill ${ev.visibility==='public'?'pub':'priv'}">${ev.visibility==='public'?'Public':'Private'}</span></p>
+      </div>
+      <span class="live-tag"><span class="live-dot"></span>Live · updates every 2s</span>
+    </div>
+    <div class="stat-grid">
+      <div class="card stat"><div class="k">Spots filled</div><div class="v">${taken}<small> / ${ev.capacity}</small></div>
+        <div class="bar"><i style="width:${pct}%"></i></div></div>
+      <div class="card stat"><div class="k">Collected</div><div class="v">${euros(collected)}</div>
+        <div class="sub" style="margin-top:10px">of ${euros(ev.capacity*ev.amountCents)} potential</div></div>
+      <div class="card stat"><div class="k">Status</div><div class="v" style="font-size:22px;margin-top:8px">
+        ${ev.status==='full'?'<span style="color:var(--good)">● Full</span>':'<span style="color:var(--violet)">● Open</span>'}</div>
+        <div class="sub" style="margin-top:8px">${ev.status==='full'?'Capacity reached':(ev.capacity-taken)+' spots left'}</div></div>
+    </div>
+    <div class="card" style="margin-top:10px;overflow:hidden">
+      <div style="padding:16px 18px;border-bottom:1px solid var(--line);font-weight:700">Confirmed guests</div>
+      <div id="tableHost"></div>
+    </div>
+  </div>`);
+  const host=node.querySelector('#tableHost');
+  if(!taken){
+    host.appendChild(el(`<div class="empty"><div class="big">No paid RSVPs yet</div>Open the guest link and confirm a spot — this list updates live.</div>`));
+  }else{
+    const tbl=el(`<table><thead><tr><th>Guest</th>${ev.questions.map(q=>`<th>${esc(q.prompt)}</th>`).join('')}<th>Paid</th><th>Time</th></tr></thead><tbody></tbody></table>`);
+    const tb=tbl.querySelector('tbody');
+    App.attendances.forEach(a=>{
+      const ans=ev.questions.map(q=>`<td>${a.answers[q.id]?`<span class="ans-tag">${esc(a.answers[q.id])}</span>`:'<span style="color:var(--muted)">—</span>'}</td>`).join('');
+      const tr=el(`<tr class="${a.fresh?'new-row':''}">
+          <td><span class="avatar">${initials(a.guestName)}</span>${esc(a.guestName)}</td>
+          ${ans}<td><b>${euros(a.amountCents)}</b></td>
+          <td style="color:var(--muted)">${timeAgo(a.at)}</td></tr>`);
+      tb.appendChild(tr); a.fresh=false;
+    });
+    host.appendChild(tbl);
+  }
+  return node;
+}
+
+function timeAgo(t){
+  const s=Math.floor((Date.now()-t)/1000);
+  if(s<5)return'just now'; if(s<60)return s+'s ago';
+  return Math.floor(s/60)+'m ago';
+}
 
 /* dashboard re-renders every 2s — simulates polling a server */
 function startPolling(){
@@ -2745,7 +2797,7 @@ function startPolling(){
 
 document.querySelectorAll('#roleSwitch button').forEach(b=>{ b.onclick=()=>{App.view=b.dataset.view;render();}; });
 render();
-// startPolling(); // enabled in Phase 4
+startPolling();
 </script>
 </body>
 </html>
