@@ -95,5 +95,5 @@ MIT (see `LICENSE`). Bundled QR library: qrcode-generator by Kazuhiko Arase, MIT
 |---|---:|---|
 | Benjamin Huggle | 755361 |
 | Adam Zdychavsky | 754417 |
-|---|---:|---|
+
 **Course:** FinTech — Erasmus University Rotterdam, Rotterdam School of Management
