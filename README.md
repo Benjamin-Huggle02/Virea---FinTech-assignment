@@ -92,7 +92,7 @@ MIT (see `LICENSE`). Bundled QR library: qrcode-generator by Kazuhiko Arase, MIT
 ## Team
 
 | Name | Student ID |
-|---|---:|---|
+|---|---:|
 | Benjamin Huggle | 755361 |
 | Adam Zdychavsky | 754417 |
 
