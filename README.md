@@ -88,3 +88,11 @@ Plain HTML + CSS + vanilla JS in one file. The original handover specced Next.js
 ## License
 
 MIT (see `LICENSE`). Bundled QR library: qrcode-generator by Kazuhiko Arase, MIT.
+
+## Team
+
+| Name | Student ID | Role |
+|---|---:|---|
+| Benjamin Huggle | 755361 |
+| Adam Zdychavsky | 754417 |
+**Course:** FinTech — Erasmus University Rotterdam, Rotterdam School of Management
